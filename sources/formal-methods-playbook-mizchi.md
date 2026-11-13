@@ -32,7 +32,7 @@
 | 実装から「宣言された仕様」と「暗黙の挙動」を分けて抜き出す。宣言はコメント、テスト名、ガード節、enum に現れる。暗黙の挙動は default 値、エラー時の分岐、評価の順序、値を決める優先順位に現れる（§0、§3） | 記載なし | 未照合 |
 | 各述語・各機構に8つの問いを機械的に投げる。空のとき、エラーのとき、否定したとき、境界の向き、同時に2つ来たとき、誰が値を決めるか、ループは何で止まるか、2つのシステムが合意しているか（§3） | 記載なし | 未照合 |
 | 全入力に対するある一瞬の性質は Z3 で、全順序・全 interleaving にわたる性質は TLA+ で調べる。状態空間が有限で決定的なら、プログラムで全列挙するほうが安い（§1） | 記載なし | 使い分けそのものは未照合 |
-| Z3 に渡すのは、区間・集合・等式からなる decidable fragment の述語に限る（§1） | 記載なし | Z3 の公式ガイドと一致する。ガイドは、非線形の整数算術を決定不能と書く。非線形の実数算術では、`check-sat` が unknown を返すかループすることがあると書く |
+| 述語が区間・集合・等式からなる decidable fragment に収まるなら Z3 を選ぶ（§1） | 記載なし | 一部だけ照合した。Z3 の公式ガイドは、非線形の整数算術を決定不能と書く。非線形の実数算術では、`check-sat` が unknown を返すかループすることがあると書く。決定可能な断片に収める理由は、この記述で裏付けられる。区間・集合・等式の組み合わせが決定可能であることは未照合 |
 | 「いつか必ず〜する」かを TLA+ で調べる（§1） | 記載なし | 条件が足りない。TLA+ は、何も変わらない遷移（stutter）が無限に続く振る舞いを許す。そのため仕様に fairness（weak / strong）を書かないと、「いつか必ず」の性質は stutter で破れる（learntla の Temporal Properties）。記事は fairness に触れていない |
 | §2 のバグの型のカタログをチェックリストとして使う。純粋述語・設定系5種、並行・時間系8種、境界・信頼系7種の計20種 | 「経験上この型が繰り返し出る」 | 未照合。頻度を示すデータは記事に無い |
 | torn read は、別ファイルに書いて rename する方式で防げる。in-place の上書きでは防げない（§2） | 記載なし | POSIX の rename と一致する。POSIX は、置き換えの間も new の名前が他スレッドから見え続け、操作前の new か old のどちらかを指すと定める。ただし2つの条件がある。異なるファイルシステムの間では EXDEV で失敗しうる。rename の節はクラッシュ後に置き換えが残るかには触れていない |
@@ -42,17 +42,18 @@
 | 判定が変わる同値類と境界（cap-1、cap、cap+1）を列挙集合として定義し、手書きのテストをモデルからの生成に置き換える（§4） | 記載なし | 未照合 |
 | わざと壊した実装（broken-variant）を用意し、検査が赤になることを確かめる。これが無いと、緑の検査が何も検証していないことに気づけない（§5） | 記載なし | 未照合 |
 | ソルバー・モデル検査器・ランタイムを nix flake や lockfile で宣言し、ローカルと CI で同じハーネスを実行する（§5） | 記載なし | 未照合 |
-| モデルとコードのずれは、実システムの操作ログをモデルに照らして再生する trace-checking で詰める。抽象モデルと実挙動を繋ぐ最も強い一手である（§6） | 記載なし | 手法は実在するが、成り立たない事例もある。Cirstea et al. 2024（arXiv:2404.16075）は、Java プログラムのトレースを TLC で TLA+ 仕様と照合する枠組みを示す。abstract は、適用したすべての分散プログラムで仕様と実装の食い違いを検出したと書く。一方、Davis et al. 2020（arXiv:2006.00915、PVLDB 13(9)）は、MongoDB Server の複製プロトコルで、高度に抽象的な仕様への適合を trace-checking で確かめることは実用的でなかったと報告する。記事は trace-checking の費用と、成り立たない条件に触れていない |
+| モデルとコードのずれは、実システムの操作ログをモデルに照らして再生する trace-checking で詰める。抽象モデルと実挙動を繋ぐ最も強い一手である（§6） | 記載なし | 手法は実在するが、成り立たない事例もある。Cirstea et al. 2024（arXiv:2404.16075）は、Java プログラムのトレースを TLC で TLA+ 仕様と照合する枠組みを示す。abstract は、適用したすべての分散プログラムで仕様と実装の食い違いを検出したと書く。一方、Davis et al. 2020（arXiv:2006.00915、PVLDB 13(9)）は、MongoDB Server の複製プロトコルで、高度に抽象的な仕様への適合を trace-checking で確かめることは実用的でなかったと報告する。§6 は trace-checking の費用と、成り立たない条件に触れていない。費用対効果は §7 で形式化全般について述べるだけである |
 | 確率的性質（期待値・分布）は Z3 と TLC に向かない。例外は整数演算の丸め誤差だけである（§7） | 記載なし | 「整数演算の丸め誤差だけ」は範囲を狭く書いている。Z3 は SMT-LIB の浮動小数点の理論を持ち、丸めモードを指定して浮動小数点の演算を扱える（Z3 の公式ガイド IEEE Floats）。確率的性質が向かないことは未照合 |
 | 主要な不変条件と危険な穴を押さえたら、新しい形式化より、溜まった反例と確認質問をドメインの担当者と片付けるほうが効果が高い（§7） | 記載なし | 未照合 |
 
 ## 照合の結果
 
 - **引用：** 記事は外部資料を1件も引用していない。バグの型の根拠は著者の経験である。
-- **一次資料と一致したもの：** Z3 の決定可能性の範囲（Z3 の公式ガイド Arithmetic）、rename による置き換えの原子性（POSIX.1-2024 の rename）。
+- **一次資料と一致したもの：** rename による置き換えの原子性（POSIX.1-2024 の rename）。
+- **一部だけ照合したもの：** Z3 を決定可能な断片に収める理由は、非線形の整数算術が決定不能という Z3 の公式ガイドの記述で裏付けられる。区間・集合・等式の組み合わせが決定可能であることは確かめていない。
 - **条件が足りないもの：**
   - 「いつか必ず」の検査には fairness の記述が要る。
-  - rename の原子性は同じファイルシステムの中に限り、クラッシュ後に残るかは rename の節の範囲外である。
+  - rename は、異なるファイルシステムの間では EXDEV で失敗しうる。クラッシュ後に置き換えが残るかは、rename の節の範囲外である。
   - Z3 は浮動小数点の丸めも扱えるため、「整数演算の丸め誤差だけ」は狭い。
   - trace-checking は、MongoDB Server の事例では実用的でなかった。
 - **再現したもの：** 空の AND と OR の値、エラーを false に畳んだ後の否定。
@@ -67,13 +68,14 @@
 1. gist の revision を確かめる：`gh api gists/db7817e6fc077d567c41cd9d41bb1c53 --jq '.history[] | [.version, .committed_at] | @tsv'`
 2. gist の本文を取得する：`gh api gists/db7817e6fc077d567c41cd9d41bb1c53 --jq '.files["formal-methods-playbook.md"].content' > playbook.md`
 3. 引用の有無を調べる：`grep -n -i -E 'http|arxiv|参考|出典|経験' playbook.md`。照合日の版では「経験上」の1行だけが出る。
-4. ブラウザで `https://microsoft.github.io/z3guide/docs/theories/Arithmetic` を開き、「Non-linear arithmetic」の節を読む。
-5. ブラウザで `https://microsoft.github.io/z3guide/docs/theories/IEEE%20Floats` を開き、丸めモードの記述を読む。
-6. ブラウザで `https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html` を開き、「remain visible」「EXDEV」「atomic」を探す。
-7. ブラウザで `https://learntla.com/core/temporal-logic.html` を開き、stutter と fairness の節を読む。
-8. ブラウザで `https://export.arxiv.org/api/query?id_list=2404.16075,2006.00915` を開き、題・著者・summary を読む。
-9. 空集合の値を確かめる：`python3 -c 'print(all([]), any([]))'` と `node -e 'console.log([].every(Boolean), [].some(Boolean))'`
-10. エラーを畳んだ後の否定を確かめる：`python3 -c 'for o in ["match","no_match","error"]: f = (o == "match"); print(o, f, not f)'`。no_match と error の行が同じ値になる。
+4. fairness と費用への言及を調べる：`grep -n -i -E 'fair|公平|費用|コスト|cost|ROI|限界効用' playbook.md`。照合日の版では、§7 の見出しと「限界効用」を含む2行の計3行だけが出る。
+5. ブラウザで `https://microsoft.github.io/z3guide/docs/theories/Arithmetic` を開き、「Non-linear arithmetic」の節を読む。
+6. ブラウザで `https://microsoft.github.io/z3guide/docs/theories/IEEE%20Floats` を開き、丸めモードの記述を読む。
+7. ブラウザで `https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html` を開き、「remain visible」「EXDEV」「atomic」を探す。
+8. ブラウザで `https://learntla.com/core/temporal-logic.html` を開き、stutter と fairness の節を読む。
+9. ブラウザで `https://export.arxiv.org/api/query?id_list=2404.16075,2006.00915` を開き、題・著者・summary を読む。
+10. 空集合の値を確かめる：`python3 -c 'print(all([]), any([]))'` と `node -e 'console.log([].every(Boolean), [].some(Boolean))'`
+11. エラーを畳んだ後の否定を確かめる：`python3 -c 'for o in ["match","no_match","error"]: f = (o == "match"); print(o, f, not f)'`。no_match と error の行が同じ値になる。
 
 ## 見直す条件
 
