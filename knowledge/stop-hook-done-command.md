@@ -113,7 +113,7 @@ reply({"decision": "block", "reason": f"Not done: `{command}` exited {done.retur
 | --- | --- | --- |
 | 登録先 | settings の `hooks.Stop`。検証では `--settings` でファイルを渡した | `hooks.json` の `hooks.Stop` |
 | 実行前の承認 | settings ファイルの hook と同じ workspace trust | `/hooks` で hook ごとに trust する。`<repo>/.codex/` に置くなら project の trust も要る |
-| 連続続行の上限 | 組み込みで8回。Claude がツールを呼ぶたびにリセットされる | ドキュメントに記述が無い。スクリプトが、変化のない差し止めを8回まで数える |
+| 連続続行の上限 | 組み込みで8回。Claude がツールを呼ぶたびにリセットされる。[hooks reference](https://code.claude.com/docs/en/hooks) は、`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` で上げられると書く。試していない | ドキュメントに記述が無い。スクリプトが、変化のない差し止めを8回まで数える |
 | 既存の Stop hook | 2026-11-13 時点で無い | `herdr-agent-state.sh idle` がある。検証では同時に起動し、herdr は Completed、このスクリプトは Blocked になり、続行が通った |
 
 ## 却下した案
@@ -124,6 +124,7 @@ reply({"decision": "block", "reason": f"Not done: `{command}` exited {done.retur
 | Claude Code の `/goal` | 評価するのは軽量なモデルで、会話の記録だけを読み、コマンドを実行しない（[/goal](https://code.claude.com/docs/en/goal)）。agent の出力が評価モデルを納得させれば止まれる。Codex では使えない |
 | CLI ごとの外側ループ（`codex exec resume --last`、`claude -p --continue`） | CLI ごとに別のループが要る。Stop hook なら同じスクリプトを両方に登録できる |
 | Hill-Climb 専用の hook | 完了判定が `climb.py status` に固定される。汎用化しても、`until` に `status` の判定を書けば同じ動きになる |
+| exit 2 と stderr で差し止める | Claude Code は、stderr に `No such file or directory` があると、差し止めずに agent を止めた。完了判定のコマンドの出力は、この文字列を含みうる。[stop-hook-return-channels.md](stop-hook-return-channels.md) のケース E2 で確かめた |
 | `stop_hook_active` で続行を1回に限る | 完了まで何度も差し止めるのが正常な動きなので、2回目の停止で強制が外れる |
 | `until` を作業ツリーに置く | repo に commit された `until` が、clone した人のセッションで実行される。`.git/` の下なら commit できない |
 
@@ -165,6 +166,8 @@ reply({"decision": "block", "reason": f"Not done: `{command}` exited {done.retur
 - 手順6の Claude Code では、「hello とだけ答えよ」という指示の後も停止が差し止められた。agent は `done.txt` を `ok` の内容で作ってから止まった。
 - 手順8の Codex では、`hello` と答えた直後に `hook: Stop Blocked` が出た。agent は `printf 'ok\n' > done.txt` を実行し、2回目の Stop で止まった。既存の herdr の Stop hook は、同じ回に `Completed` になった。
 - 手順8で `< /dev/null` を付けないと、`codex exec` は「Reading additional input from stdin...」と出して標準入力を待ち続け、5分で打ち切られた。
+- 2026-11-14 に codex-cli 0.169.0 で、手順8の `-c 'projects."<repo>".trust_level="trusted"'` を付けて別の hook を `.codex/hooks.json` に置いたところ、その hook は走らなかった。`Untrusted project-local configuration is disabled` の警告が出た。`-c 'hooks.Stop=[...]'` で hook を渡すと走った。このページのスクリプトでは、手順をやり直していない。
+- スクリプト自体が失敗すると、agent は止まる。[stop-hook-return-channels.md](stop-hook-return-channels.md) のケース B と G で、exit 1 で終わる hook が、どちらの CLI でも差し止めないことを確かめた。スクリプトを読む限り、stdin が JSON でないとき、`state.json` が JSON として読めないとき、`python3` が無いときに、exit 0 以外で終わる。
 - 確かめていないこと：
   - agent が `until` を消したり書き換えたりして強制を外すか。
   - 完了判定のコマンドが実際のテストスイートのように時間がかかる場合の振る舞い。
