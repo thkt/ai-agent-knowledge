@@ -9,6 +9,8 @@
 3. 測るのに時間がかかりすぎるとき、またはテストが書けないときに、判定を I/O から切り離す。
 4. 入力の組み合わせが多い規則に PBT を、状態遷移と並行性の箇所に形式手法を当てる。
 
+手順2の完了判定は、コードを実行して確かめる。agent や reviewer が「確かめた」と報告したときは、実行した結果なのか、コードを読んだ結果なのかを区別して読む。自分の仕組みについても、確認の段が実行と読解のどちらで行われているかを点検する。
+
 確かめたのは1と2だけである。3と4は、1と2の結果から置いた順番で、試していない。この知見は検証だけで、`~/.claude` の設定には入れていない。
 
 ## 採用した理由
@@ -21,6 +23,7 @@
 | 不変条件の一覧を、測った結果から得る | 拾われなかった12種は、コードが決めているのにテストが固定していない規則だった。例は、依存対応が集合外のテストを指すと止まること、収集コマンドの指定時に `.git` の下を数えないこと、出力がちょうど200文字のとき末尾を示さないこと |
 | 切り離しが要るかを、費用から判断する | 12種は、既存と同じ CLI 経由の統合テストで全部拾えた。切り離さなくても検出はできた。費用は、全テストが4分41秒、関係する6ファイルに絞って73秒だった |
 | agent が確かめられなかったことを、外から確かめる | agent は壊した実装を当てて走らせるコマンドを権限で拒否され、「実行して確認できていない」と報告した。完了判定が12種を走らせ、全部落ちることを確かめた |
+| 「確かめた」が実行か読解かを、仕組みの側で見分ける | 手元の audit の検証役 critic-evidence は、コードを実行するツールを持たない。それでも判定の名前は `verified`、チェックの名前は `execution_trace` である。assert の enhancer-evidence は、build と test の結果を dynamic evidence と呼び、static findings と分けて扱う。区別は assert の語彙にあり、audit の語彙に無い |
 
 ## 却下した案
 
@@ -149,6 +152,7 @@ echo "$(( $(date +%s) - start ))" > "$results/$id.secs"
 
 8. agent を実行する。`claude -p --model sonnet --settings <settings> --permission-mode acceptEdits --allowedTools "Bash(bun test:*),Bash(bun:*),Bash(git status:*),Bash(git diff:*)" --output-format stream-json --verbose "<prompt>" < /dev/null`
 9. hook の記録、agent が足したファイル、出力の `result` を読む。
+10. `~/.claude/agents/critics/critic-evidence.md` の `tools:` の行と Verdicts の表を読む。`~/.claude/agents/enhancers/enhancer-evidence.md` の入力の表から Dynamic evidence の行を読む。
 
 手順8の prompt は、次の文の前に、拾われなかった12種を1行ずつ並べたものである。各行は、ID、説明、置き換えの前後からなる。
 
@@ -174,7 +178,12 @@ Add tests to a new file tests/classification-gaps.test.ts so that each variant m
 - 手順8の agent は、21ターン、128.8秒、0.68ドルで終わった。189行のテストファイルを足し、テストは14件だった。`src/`、`plugins/`、`scripts/` は変更しなかった。
 - Stop hook は1回だけ走り、差し止めなかった。`M00` ではテストファイルが4秒で通り、12種ではどれも落ちた。落ちたテストの名前は、種ごとの規則を述べていた。例は、`A04` に対する「依存対応が集合外のテストだけを指すと、分類検査は止まる」である。
 - agent の Bash は、権限で2回拒否された。agent の最後の報告は、12種で落ちることを「実行して確認できていません」と書いた。
+- 手順10で、`~/.claude`（commit `4207ed2e`）の定義を読んだ。
+  - critic-evidence の `tools:` は `Read, LS, Bash(git:*), Bash(ugrep:*), Bash(bfs:*)` で、コードを実行するツールが無い。
+  - 判定 `verified` の条件は、具体的な実行経路をたどれて、発火の条件を名指しできることである。たどる手段は、ファイルを読むことと検索である。
+  - enhancer-evidence は、`build=pass, tests=fail (3 failed)` のような1行を Dynamic evidence として受け取り、static findings と突き合わせる。
 - 確かめていないこと：
+  - `~/.claude` のほかの agent、skill、workflow で、確認の段が実行と読解のどちらかは点検していない。読んだのは上の2ファイルだけである。
   - 測ったのは1モジュールで、agent の実行は1回だけである。
   - 45種は、判定の分岐、境界、除外の条件から手で選んだ。選び方に網羅性の根拠は無い。
   - agent には、拾われなかった種の置き換えの前後を見せた。足したテストが、その置き換えだけに合わせ込まれていないかは確かめていない。テストの中身は名前だけを読んだ。
@@ -187,4 +196,5 @@ Add tests to a new file tests/classification-gaps.test.ts so that each variant m
 - 2つ目のモジュールか別の repo で測り、拾われなかった種を既存の形式のテストで埋められなかったとき。結論の手順3を前に出す根拠になる。
 - 判定を I/O から切り離して、測る時間を比べたとき。
 - mutation のツールを入れ、手で選んだ45種と結果を比べたとき。
+- `~/.claude` の全体を、確認の段が実行か読解かで点検したとき。または、audit の判定に実行と読解の区別を入れたとき。
 - Claude Code か bun のバージョンが上がり、Stop hook の入出力かテストの実行時間が変わったとき。
