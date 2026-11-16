@@ -83,8 +83,9 @@ e-book は、defaults の背後にある価値を3つ挙げる。fast feedback�
 | 自明なものは載せない | `~/.claude/rules/conventions/MARKDOWN.md` の「Removing duplicate instructions」は、システムプロンプトと重複する指示を削除できるとする。モデルが指示無しで行うことを rules に書かない、という同じ選び方である |
 | 当然になったものは一覧から外す | 同じ節は、削除の可否をモデルの更新のたびに確かめ直すとする。README の「既存ページを見直す」と各ページの「見直す条件」は、知見の側の見直しを担う。`~/.claude/rules/core/BOUNDARIES.md` の Overeagerness は、既存の構造を外す前に DR の Reassessment Triggers を読むとする |
 | GenAI には defaults ではなく guardrails を置く | hadome は、守らせる境界を機械で検査する。rules は、外せる既定を文章で渡す。playbook ページの区別に当てはめると、前者が guardrail、後者が default にあたる |
+| default と guardrail の間を、両方向に移し替える | Addy Osmani の記事 [Your coding agents made you a manager](https://x.com/addyosmani/status/2119332146485891501)（2026-11-08 公開、2026-11-16 に `xr article` で取得）は、Claude Code の prompt、CLAUDE.md、skill を「依頼」、hook、deny rules、managed settings を「強制」と分ける。強調しても守られない CLAUDE.md の行は hook にし、好みを表すだけの hook は外すと書く。記事に測定は無く、記事が引く Claude Code のガイドは照合していない |
 
-Sensible Defaults は、人のチームのプラクティスを対象にする。agent に渡す rules に当てはめる根拠は、どの資料にも無い。
+Sensible Defaults は、人のチームのプラクティスを対象にする。agent に渡す rules に当てはめる根拠は、照合した6本の資料には無い。上の表の Osmani の記事は、管理の技能を agent に当てはめる側の資料である。
 
 ## 照合の結果
 
