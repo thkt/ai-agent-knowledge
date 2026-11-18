@@ -2,6 +2,13 @@
 
 apple/container は、Mac で Linux の container を container ごとの軽量 VM で動かす CLI である。agent の実行環境を閉じ込める用途に使えるかを判断するため、その主張を文書と Issue で照合した。自分たちが採用した判断ではない。手元で動かした結果は [agent-in-apple-container.md](../knowledge/agent-in-apple-container.md) にある。
 
+## TL;DR
+
+- container ごとに VM を分けるので、ホストのファイルは、その container にマウントした分だけが VM に入る。
+- 照合した文書は main の `c05a560` で、手元の CLI は 1.1.0 だった。版が離れている。
+- 手元では、ホストの VPN を有効にすると、container から外への TLS がリセットされた。原因は特定していない。
+- 手元で動かした結果は [agent-in-apple-container.md](../knowledge/agent-in-apple-container.md) にある。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [apple/container](https://github.com/apple/container) |

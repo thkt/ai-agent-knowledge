@@ -2,6 +2,13 @@
 
 設計文書を書くセッションと、会話の履歴を持たないセッションを分けてレビューする EGM の考え方を、根拠と照合した結果をまとめる。自分たちが採用した判断ではない。
 
+## TL;DR
+
+- 設計文書は、会話の履歴を持たない新しいセッションが、文書だけを読んで設計を説明できるまで直す。
+- 書くセッション（Elephant）と読むセッション（Goldfish）を分け、文書が溜まった文脈に頼っていないかを確かめる。
+- エッセイの数値はすべて著者の経験の値で、計測方法は書かれていない。
+- plugin の試験が確かめるのは手順の実行で、レビューの見落としが減ったかは測っていない。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model)（plugin）と、その元になったエッセイ [Elephants, Goldfish and the New Golden Age of Software Engineering](https://medium.com/@drensin/elephants-goldfish-and-the-new-golden-age-of-software-engineering-c33641a48874) |

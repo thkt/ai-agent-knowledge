@@ -2,6 +2,14 @@
 
 Lauren Tan（poteto）が AI Engineer のチャンネルで公開した17分の講演を、文字起こしと動画の説明欄で照合した。agent に書かせるコードの品質を、コードベースと検査の側で保つ方法を述べる。自分たちが採用した判断ではなく、講演が挙げる数字は講演者の自己申告である。
 
+## TL;DR
+
+- 講演の主張は、agent を信頼できるのは agent が働く環境に投資したときだけ、というものである。
+- 投資の順番は、コードそのもの、静的な検査、検証、文章の4層である。訂正は、rules の行ではなく決定論的な検査にする。
+- コメントの99%を禁止し、lint のエラーメッセージに置き換えたと述べる。根拠は経験1件である。
+- 数字（月11,000件の PR、revert 約0.5%）は講演者の自己申告で、測り方は示されない。
+- 照合に使ったのは文字起こしと動画の説明欄で、音声とは突き合わせていない。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [All Code Is Slop (Except Mine)](https://www.youtube.com/watch?v=O_zcc6Xl12g)（YouTube） |
@@ -76,9 +84,11 @@ Lauren Tan（poteto）が AI Engineer のチャンネルで公開した17分の�
 | --- | --- |
 | 訂正は、rules の行ではなく決定論的な検査にする | [sensible-defaults.md](sensible-defaults.md) に引いた Osmani の記事は、守られない CLAUDE.md の行を hook に移すと書く。講演は、hook より手前の lint と設計を先に挙げる。[stop-hook-done-command.md](../knowledge/stop-hook-done-command.md) は、完了の判定を文章からコマンドに移した手元の例である |
 | 自動化の前に、コードベースを直す | [measure-tests-before-adding-practices.md](../knowledge/measure-tests-before-adding-practices.md) の順番は「まず測る」で、講演の順番は「訂正のたびに lint を足す」である。どちらも、観察した失敗から手法を入れる。講演は、今ある検査がどこまで拾うかを測る手順を示さない |
+| 土台の上に、外側のループを作る | [pstack-overnight-and-self-starting-loops.md](pstack-overnight-and-self-starting-loops.md) は、pstack の手引きが書く、自律させる前の4つの条件と、人が始めない自動化を照合した。講演の例は自動で merge し、手引きの実例の benny は draft PR で止まる。手元の feedback-loop#187 は、テストと lint の改善に限り、draft PR で止める |
 | agent が自分でコードを動かして確かめる | 同じページは、確認の段が実行と読解のどちらで行われているかを点検すると書く。講演の「実行時の検証」は、実行の側にあたる |
 | コードベースは agent への最大の入力である | [codebase-sweep-prompts.md](codebase-sweep-prompts.md) は、コードベースを総点検するプロンプトを集めた。講演の「古いパターンを片付ける」作業にあたる |
 | 形式検証は、層の1つとして実験中である | [pstack-formal-verification.md](pstack-formal-verification.md) は skill の本文を照合した。用途に Lean があることと、実験中という位置づけは、skill の本文には無く、この講演で分かった。[state-machine-check-in-app-language.md](../knowledge/state-machine-check-in-app-language.md) は、TLA+ を入れずに状態を全列挙する形を題材で確かめた |
+| agent は文章を、正しいことをしない理由の置き場にする | [pstack-fix-root-causes.md](pstack-fix-root-causes.md) は、pstack の根本原因の原則を照合した。回避策を弁護する段落ほどのコメントを、コードが間違っている信号として扱う。`~/.claude` の `reviewer-causation` は、同じ信号をレビューで見る |
 | コメントの99%を禁止する | `~/.claude` の rules は、コードに持たせられない why と why-not に限ってコメントを残す。講演の方針と食い違う。[code-comments-for-agents.md](../knowledge/code-comments-for-agents.md) は、コメントを消した条件で agent が規則を消すかを測り、消さなかった。その結果から、強さを選べるコメントの検査を feedback-loop の Issue にした。手元で、コメントが応急処置の正当化に使われた例は集めていない |
 
 ## 照合の結果
