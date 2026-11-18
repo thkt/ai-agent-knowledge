@@ -6,6 +6,7 @@
 - 欠陥を2つ入れた題材は59状態で、両方の欠陥を最短の手順つきで見つけた。直した題材は49状態で、発見は0件だった。
 - モデルから作った経路で実装を動かすときは、状態ごとの最短経路では欠陥を拾えず、遷移ごとの経路で拾えた。
 - 「いつか必ず起こる」性質は対象外である。確かめたのは自作の題材1つである（2026-11-16）。
+- xstate 6.0.0-beta.3 でも同じ結果が出た。v6 では規則を `@xstate/test` の temporal でも書けた。`propertyTest` は、モデルが受け付ける事象だけを送る指定（`when`）を付けると、実装の欠陥を3手の反例まで縮めた（2026-11-18）。
 
 ## 結論
 
@@ -269,12 +270,132 @@ stateDiagram-v2
   - 「いつか必ず起こる」性質を、状態のグラフの上に実装した場合の量。
   - XState の parallel な状態や、複数の actor を使ったモデル。題材は、全クライアントを1つの機械の `context` に入れた。
   - 6,249 より大きい状態数での時間とメモリ。
-  - `getSimplePaths` が、戻る遷移を覆うか。
+  - `getSimplePaths` が、戻る遷移を覆うか。v6 beta では、`'simple'` の経路で実装の欠陥を拾えた（[xstate v6 beta での再実行](#xstate-v6-beta-での再実行)）。
+
+### xstate v6 beta での再実行
+
+xstate v6 のベータで、上の再現手順をやり直した。v5 での結果は、すべて同じに出た。加えて、v5 では補助コードで書いた検査の一部を、`@xstate/test` の組み込みで書けた。v6 はベータのため、安定版が出たらこの節をやり直す。
+
+| 項目 | 内容 |
+| --- | --- |
+| 検証日 | 2026-11-18 |
+| モデル | 検証に agent は使っていない。検証用のコードは、Claude Code（`claude-opus-5-5`）のセッションで書いた |
+| ツール | xstate 6.0.0-beta.3、@xstate/test 2.0.0-beta.1、fast-check 4.10.2、bun 1.4.4 |
+
+v6 では、guard と assign を1つの遷移の関数にまとめる。関数が `undefined` を返すと、その事象を受け付けない。`check.mjs` は、変えずに動いた。
+
+```js
+// machine.mjs（v6）
+import { createMachine } from "xstate";
+
+export function notifications(clients, { fixed = false } = {}) {
+  const set = (context, name, change) => ({ ...context, clients: { ...context.clients, [name]: { ...context.clients[name], ...change } } });
+  const clientEvents = (withAck) =>
+    Object.fromEntries(
+      clients.flatMap((name) => {
+        const C = name.toUpperCase();
+        const events = [
+          [`${C}_DROP`, ({ context }) => (context.clients[name].online ? { context: set(context, name, { online: false }) } : undefined)],
+          [
+            `${C}_RECONNECT`,
+            ({ context }) => {
+              const c = context.clients[name];
+              if (c.online) return;
+              const redeliver = context.sent && !c.acked && (fixed ? c.shown === 0 : true);
+              return { context: set(context, name, { online: true, shown: c.shown + (redeliver ? 1 : 0) }) };
+            },
+          ],
+        ];
+        if (withAck) {
+          events.push([
+            `${C}_ACK`,
+            ({ context }) => {
+              const c = context.clients[name];
+              return c.online && c.shown > 0 && !c.acked ? { context: set(context, name, { acked: true }) } : undefined;
+            },
+          ]);
+        }
+        return events;
+      }),
+    );
+
+  return createMachine({
+    id: "notifications",
+    initial: "idle",
+    context: { sent: false, clients: Object.fromEntries(clients.map((name) => [name, { online: true, shown: 0, acked: false }])) },
+    states: {
+      idle: {
+        on: {
+          ...clientEvents(false),
+          SEND: ({ context }) => ({
+            target: "delivering",
+            context: {
+              ...context,
+              sent: true,
+              clients: Object.fromEntries(Object.entries(context.clients).map(([name, c]) => [name, { ...c, shown: c.shown + (c.online ? 1 : 0) }])),
+            },
+          }),
+        },
+      },
+      delivering: {
+        always: ({ context }) => (Object.values(context.clients).every((c) => c.acked) ? { target: "done" } : undefined),
+        on: { ...clientEvents(true), EXPIRE: { target: "expired" } },
+      },
+      expired: fixed ? { type: "final" } : {},
+      done: { type: "final" },
+    },
+  });
+}
+```
+
+規則を temporal で書く形と、実装を生成した事象の列で試す形は、次のとおり。`stopWhen` は手順4と同じものを使う。`types` は事象の名前の一覧で、`SEND`、`EXPIRE` と、クライアントごとの `_DROP`、`_RECONNECT`、`_ACK` である。`create` は、手順8の実装を作り、`send` と `read` を返す。`read` は実装の `clients` の写しを返す。
+
+```js
+import { propertyTest, testPaths } from "@xstate/test";
+import * as fc from "fast-check";
+
+const temporal = [{ type: "never", id: "shown twice", predicate: ({ snapshot }) => Object.values(snapshot.context.clients).some((c) => c.shown > 1) }];
+await testPaths(notifications(["desktop", "phone"]), { temporal, stopWhen });
+
+// モデルが受け付ける事象だけを、実装に送る
+const events = Object.fromEntries(types.map((t) => [t, { generate: fc.constant({}), when: ({ snapshot, event }) => snapshot.can(event) }]));
+await propertyTest(notifications(["desktop", "phone"], { fixed: true }), { events, seed: 1, sut: { create, projectModel: (s) => s.context.clients } });
+```
+
+#### 再現手順（v6）
+
+1. 空のディレクトリに `package.json`（`{ "type": "module" }`）を置き、`bun add xstate@beta @xstate/test@beta fast-check` を実行する。
+2. v6 の `machine.mjs` と、上の `check.mjs` を保存する。
+3. 上の手順5、6、9、11を、同じ規則と `stopWhen` で実行する。
+4. 手順10の代わりに、`getShortestPaths` と `getSimplePaths` の全経路を `transition` で再生し、各手で `isUnhandled` が真になる数を数える。@xstate/test 2.0.0-beta.1 は `createTestModel` を export しない。
+5. 欠陥のあるモデルと直したモデルのそれぞれに、temporal の `never` で規則を渡した `testPaths` を実行する。
+6. 手順8の実装を `sut` にして、`testPaths` を、`pathGenerator` が `'shortest'` と `'simple'` のそれぞれで実行する。
+7. 同じ実装で `propertyTest` を実行する。各事象に `when` を付けた場合と付けない場合を比べる。
+8. `machineToJSON` で書き出した欠陥のあるモデルと、`never` に `#notifications.expired` を書いた checks を、`npx xstate test` に渡す。
+
+#### 結果（v6）
+
+| 手順 | v5 | v6 |
+| --- | --- | --- |
+| 5. 欠陥のあるモデル | 59 状態、発見 41 件。最短の手順は `SEND -> EXPIRE` と `SEND -> DESKTOP_DROP -> DESKTOP_RECONNECT` | 同じ |
+| 5. 直したモデル | 49 状態、発見 0 件 | 同じ |
+| 6. クライアント5つ | 6,249 状態、267 ミリ秒 | 6,249 状態。時間は2回測って 528 ミリ秒と 1,156 ミリ秒で、ばらつきが大きい。v5 の値とは、同じ条件で比べていない |
+| 9. 欠陥のある実装 | 遷移ごとの経路 85 本のうち 10 本が落ちた。状態ごとの経路では 0 本 | 同じ |
+| 11. 経路の再生 | 全経路が `state` に到達した。各手の `state` は事象の後の状態 | 同じ。v6 の型定義（`Step`）の説明は「事象の後の状態」と書く |
+
+v6 で新しく分かったことは、次のとおり。
+
+- 手順4で、モデルが無視する手は0だった。`getShortestPaths` の 49 本と、`getSimplePaths` の 2,515 本を確かめた。
+- 手順5で、temporal の `never` が欠陥を見つけた。反例は `SEND -> DESKTOP_DROP -> PHONE_ACK -> PHONE_DROP -> DESKTOP_RECONNECT` の5手で、最短の3手ではなかった。直したモデルは通った。最短の手順が要る用途では、`check.mjs` を使う。
+- 手順6で、`'shortest'` の 24 本では、欠陥のある実装が通った。`'simple'` では落ちたが、反例は 14 手だった。直した実装は、`'simple'` の 1,473 本で通った。
+- 手順7で、`when` を付けた `propertyTest` は、欠陥のある実装の反例を `SEND -> PHONE_DROP -> PHONE_RECONNECT` の3手まで縮めた。直した実装は通った。`when` を付けないと、`idle` で `DESKTOP_ACK` を実装に送り、直した実装も落ちた。モデルが受け付けない事象を実装に送るためで、v5 の `createTestModel` で見た問題と同じ種類である。
+- 手順8で、`xstate test` は `EVALUATOR_REQUIRED` を返し、関数で書いた遷移 12 か所の位置を挙げた。CLI の `never` と `reachable` は状態の ID だけを受け取り、context の規則は書けない。
+- 確かめていないこと：temporal の `eventually`、`until`、`respond`。型の説明は「省略すると、実行が終わるまでに成り立てばよい」と書き、有限の実行の中で判定する。「いつか必ず起こる」性質の検査としては試していない。
 
 ## 見直す条件
 
 - 手元の repo の状態機械で試したとき。特に、規則が「いつか必ず起こる」の形でしか書けなかったとき。
 - 状態数が増えて、全列挙が数秒で終わらなくなったとき。
-- xstate のバージョンが上がり、`xstate/graph` に規則の検査や遷移を覆う経路の生成が入ったとき。
+- xstate v6 が安定版になったとき。v6 beta では、`@xstate/test` に規則の検査（temporal）と、単純経路での実装の実行が入った。安定版で手順をやり直し、「xstate v6 beta での再実行」の節を書き直す。
 - TLC か FizzBee を動かし、同じ題材で比べたとき。
 - この形を skill として作ったとき。「skill にする場合の形」の節を、作った結果で置き換える。
