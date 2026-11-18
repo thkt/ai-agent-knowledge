@@ -2,6 +2,13 @@
 
 この記事が示す agent skill の作り方と検証の考え方を、根拠と照合した結果とあわせてまとめる。自分たちが採用した判断ではない。
 
+## TL;DR
+
+- skill の失敗には2種類ある。agent が指示どおりに動かない場合と、動いても成果が良くならない場合である。
+- skill ごとに adherence と effect の2つを、自分のモデルと環境で測る。
+- 引用はすべて実在した。abstract と合わない数値が2件、原文より強く書かれた箇所が4点あった。
+- 手元では、自作の31 skill のうち3つが、90日のあいだ一度も読み込まれていなかった。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [How to write and test agent skills with evals](https://x.com/sermakarevich/status/2112198653469241856)（X の Article） |

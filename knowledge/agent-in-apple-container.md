@@ -1,5 +1,12 @@
 # apple/container の通常の container で agent を動かすと、ホストで触れられるのはマウントした worktree だけになる
 
+## TL;DR
+
+- apple/container の `container run` で Claude Code を動かすと、agent がホストで触れられるのはマウントした worktree だけになった。
+- 認証は container の中でログインし、名前付き volume に残した。Stop hook のループも container の中で動いた。
+- `container machine` は、ホームをマウントし SSH agent を転送するので、agent を閉じ込める用途には合わない。
+- 検証だけで、日々の作業には使っていない（2026-11-13、`claude-haiku-5-5`）。
+
 ## 結論
 
 Claude Code を apple/container の通常の container（`container run`）で動かすと、agent がホストで触れられるのはマウントした worktree だけになった。認証は container の中でログインし、名前付き volume に残した。[Stop hook のループ](stop-hook-done-command.md)も container の中でそのまま動いた。

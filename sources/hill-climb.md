@@ -2,6 +2,12 @@
 
 Hill-Climb は、coding agent が出す「完了」を、スクリプトが測ったスコアで裏付けさせる skill である。その仕組みを実装と照合した。あわせて、Claude Code と Codex の Stop hook で停止の判定を共通化する案を組み立てた。どちらも自分たちが採用した判断ではない。
 
+## TL;DR
+
+- スコアが改善し、guard がすべて通った変更だけを commit し、それ以外は作業ツリーごと戻す。
+- スクリプトが防ぐのは、ロック対象の改変、改善しない変更、guard の失敗の3つだけである。期待値のハードコードは検出しない。
+- README の実行例の数値は自己申告で、再現していない。Stop hook で停止の判定を共通化する案は、採用していない。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [Bil0000/Hill-Climb](https://github.com/Bil0000/Hill-Climb)（Claude Code plugin と、`SKILL.md` を読む agent 向けの skill） |

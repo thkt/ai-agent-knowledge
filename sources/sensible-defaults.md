@@ -2,6 +2,13 @@
 
 Sensible Default は、それを覆す文脈が無い限り採用するプラクティスを指す、Thoughtworks の用語である。Martin Fowler の用語解説と、そこから辿れる Thoughtworks の公開資料5本を照合した。個別の defaults の一覧は公開ページから取得できず、資料の中で名前が挙がったものだけを拾った。自分たちが採用した判断ではない。
 
+## TL;DR
+
+- Sensible Default は、覆す文脈が無い限り採用するプラクティスである。外すことはできるが、外す側が理由を説明する。
+- 「ベストプラクティス」と違い、新しい文脈では再評価し、状況が変われば上書きする。
+- 個別の defaults の一覧は取得できなかった。効果の測定値は、どの資料にも無い。
+- 対象は人のチームのプラクティスで、agent の rules に当てはめる根拠は、照合した資料には無い。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [Sensible Default](https://martinfowler.com/bliki/SensibleDefault.html)（以下「bliki」）、[Sensible defaults](https://www.thoughtworks.com/insights/topic/sensible-defaults)（以下「playbook ページ」）、[Starting out with sensible default practices](https://www.thoughtworks.com/insights/podcasts/technology-podcasts/sensible-defaults)（以下「podcast 2022」）、[Sensible defaults: A way to think about our technology practices](https://www.thoughtworks.com/insights/podcasts/technology-podcasts/sensible-defaults-way-think-technology-practices)（以下「podcast 2024」）、[Better technology decision-making is underpinned by 'sensible defaults'](https://www.thoughtworks.com/insights/blog/technology-strategy/better-tech-decision-making-underpinned-by-sensible-defaults)（以下「blog」）、[Engineering practices to accelerate your data product delivery](https://www.thoughtworks.com/insights/e-books/modern-data-engineering-playbook/engineering-practices-to-accelerate-your-data-product-delivery)（以下「e-book」） |

@@ -2,6 +2,13 @@
 
 pstack は、Cursor の公式プラグインのリポジトリで公開されている agent 用の skill 集である。作者の投稿が勧める2つの skill を、原文で照合した。状態機械を形式検証の言語でモデル化して検査する skill と、その結果を状態遷移図にする skill である。自分たちが採用した判断ではなく、手元では動かしていない。
 
+## TL;DR
+
+- pstack の2つの skill は、状態機械を TLA+ でモデル化して検査し、結果を状態遷移図にする。
+- 検査は、次の agent が使える project-local の skill として残す。失敗を見たことのない検査は信じない。
+- TLC と Java が要る。効果の件数や時間は書かれていない。
+- 手元では動かしていない。Java を入れない形は [state-machine-check-in-app-language.md](../knowledge/state-machine-check-in-app-language.md) で確かめた。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [poteto の投稿](https://x.com/poteto/status/2119521036660314339)と、[cursor/plugins の pstack](https://github.com/cursor/plugins/tree/main/pstack) |
@@ -57,7 +64,7 @@ pstack は、Cursor の公式プラグインのリポジトリで公開されて
 
 - **照合した主張：** 「考え方と根拠」と「限界」の各行は、右の列に挙げた原文に記述がある。
 - **動かしていないもの：** pstack、TLC、`statechart` のスクリプト。
-- **読んでいないもの：** `maintain-formal-verification-skill`、`create-verification-skill`、`statechart/references/render.md`、`docs/guide/` の各章、README の残りの節。
+- **読んでいないもの：** `maintain-formal-verification-skill`、`create-verification-skill`、`statechart/references/render.md`、`docs/guide/` の各章、README の残りの節。第7章は [pstack-overnight-and-self-starting-loops.md](pstack-overnight-and-self-starting-loops.md) で照合した。
 - **読めなかったもの：** スレッド内で作者がリンクした `@mattyp` の投稿2件。ログインを求められ、本文を取得できなかった。
 
 ## 照合の手順

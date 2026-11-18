@@ -2,13 +2,20 @@
 
 Anthropic が公開した2つの資料を照合した。1つは、作業ごとにどのモデルと effort を選ぶかの指針である。もう1つは、Claude Fable 5.2 に固有のプロンプトの書き方である。手元のハーネスに関わる指摘は、手元の設定と照らした。どれも自分たちが採用した判断ではない。
 
+## TL;DR
+
+- モデルが作業に足りないときは、モデルを上げる前に検証の手段を与え、次に effort を上げる。
+- Fable 5.2 では、以前のモデル向けに書いた指示が逆効果になりうる。ガイドは症状ごとに対処を挙げる。
+- ベンチマークの点数、費用、効果の割合は Anthropic の社内の試験の値で、再現していない。
+- 手元の設定と照らしたが、どの設定も変えていない。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [Which Claude model should you build with?](https://claude.dev/blog/which-claude-model-should-you-build-with/)（以下「選び方」）と、[Claude Fable 5.2へのプロンプト](https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-fable-5-2)（以下「ガイド」） |
 | 著者・発行元 | 選び方は Addy Osmani（Anthropic のブログ）。ガイドは Anthropic の公式ドキュメント |
 | 公開日 | 選び方は 2026-11-09。ガイドは記載が無い |
 | 照合した版 | 2026-11-13 に `scout fetch` で取得した版 |
-| 照合日 | 2026-11-13 |
+| 照合日 | 2026-11-13。選び方は 2026-11-17 に取り直し、表の数値と公開日が変わっていないことを確かめた |
 | 照合した範囲 | 2つの本文。手元の `~/.claude/agents` の `model:` の指定と、`~/.claude/rules/conventions/PROSE.md` の文体のルール |
 | この資料を根拠にした Issue | なし |
 
@@ -33,6 +40,11 @@ Anthropic が公開した2つの資料を照合した。1つは、作業ごと�
 | メインの context を小さく保つ | 1ターンの cache の読み出しは、context が 150K token で約 $0.03、20K で約 $0.004 | 原文に記述がある。量の多い読み取りは、安い subagent に回すとする |
 | subagent は小さいモデルに回す | 間違いに気づきやすい作業（ファイル探し、テストの実行、ログ読み）が向く。コードの編集と判断はメインのモデルに残す | 原文に記述がある。`opusplan` は、計画を Opus、編集を Sonnet に回すため、この指針と逆向きだと書く |
 | 組み込みの Explore を安くする | 現在の Claude Code では、組み込みの Explore subagent はセッションのモデルで動く。安く回すには、`model: haiku` を付けた `Explore` という名前の subagent を自分で定義する | 原文に記述がある |
+| 繰り返し走らせる agent の作業は Sonnet 5.5 の `medium` から始める | 作業ごとの表は、調査、レビュー、下書きを例に挙げ、範囲の決まった繰り返しの作業に大きいモデルはほとんど要らないと書く | 原文に記述がある。測定は示されない |
+| モデルを比べるときは、難しい課題の費用も見る | 20問の検索のベンチマークで、2問が費用の43%を占めた | 原文に記述がある。ベンチマークの名前は書かれていない |
+| モデルの切り替えは、作業の区切りで行う | prompt cache はモデルごとである。切り替えた最初のターンは、会話全体に cache の書き込みの料金がかかる。Claude Code では、先に `/compact` するか、短い計画を書いて新しいセッションを始める | 原文に記述がある |
+| 下の階層のモデルへ移ると、それまでの思考は引き継がれない | モデルは、自分より上のモデルの思考の block を読まない。読めない block は API が落とし、要求は成功する。Fable 5.2 からほかの一般提供のモデルへ移ると、思考は落ちる | 原文に記述がある。読める組み合わせの一覧は、リンク先の Preserved thinking の文書にあり、読んでいない |
+| 1つの context に収まらない作業は、上位のモデルが分け、安い worker に並列で渡す | 約2,200万 token のソースコードから欠陥を探す社内のベンチマークで、Opus 5.5 が Sonnet 5.5 の worker を最大25個まで率いる構成は、Opus 5.5 単独より約3分の1安く、点数はほぼ同じだった | 原文に記述がある。依存する手順が1本に連なる作業と、1つの context に収まる作業には使わないと書く。計画と統合の費用が、節約を上回るためである |
 | advisor は効果が出る場面が限られる | 公式のコストのガイドが挙げる4つの組み合わせのどれも、実行役単独を明確には上回らなかった。Opus 5.5 の `high` に Fable 5.1 の advisor を付けた例は、1.7点の上積みに約2.1倍の費用がかかった | 原文に記述がある。上積みは実行ごとのぶれの範囲に近いと書く |
 | 複数のモデルを混ぜるなら、最も厳しいモデルに合わせて要求を組む | 履歴を追記だけに保つ、`tool_choice: auto` と strict なツールを使う、content block を `type` で読む | 原文に記述がある。Fable 5.2 は、思考の block より前を変えた要求を 400 で拒否する |
 | 自分の作業で測る | 実際の課題を抜き出し、結果の確認を書き、候補ごとに2〜3の effort で回し、費用と点数をグラフにする | 原文に記述がある。複数のモデルの構成は、どの単独のモデルの点よりも良いときだけ残すとする |
@@ -61,6 +73,7 @@ Anthropic が公開した2つの資料を照合した。1つは、作業ごと�
 | 厳しすぎる文体のルールを見直す | `PROSE.md` に「One claim per sentence」「No nested clauses」「One action per step line」がある。ガイドの例のような語数の上限は無い。Fable 5.2 で文章がぎこちなくなった場合に、最初に見直す候補になる |
 | 「Finishing work」の文でも、残りを並べて止まる終わり方は消えない | [stop-hook-done-command.md](../knowledge/stop-hook-done-command.md) の Stop hook は、完了判定のコマンドが通るまで停止を差し止める。プロンプトで減らしきれない分を止める層になる |
 | 所有者の一文で、重複を統合させる | [codebase-sweep-prompts.md](codebase-sweep-prompts.md) を元にした `sweep` の草案の `modules` の観点と組み合わせられる。ただし、出力の token の増加と、頼んでいない変更が起きる |
+| 繰り返し走らせる agent の作業は Sonnet 5.5 の `medium` から始める | [thkt/feedback-loop#187](https://github.com/thkt/feedback-loop/issues/187) は、テストと lint の改善を人が始めずに回す状態を求める。agent を動かす場所もモデルも決めていない（2026-11-17）。[measure-tests-before-adding-practices.md](../knowledge/measure-tests-before-adding-practices.md) の、すり抜けた壊し方を埋める作業は、`claude-sonnet-5-5` で行った |
 | 沈黙を破るリマインダー | このリポジトリで作業した Claude Code のセッションの harness は、ガイドの例とほぼ同じ文を、黙ったままの区間の後に挟んでいた |
 
 ## 照合の結果

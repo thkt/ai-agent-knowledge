@@ -2,6 +2,14 @@
 
 Anthropic の Claude Code チームの Lydia Hallie が、AI Engineer のチャンネルで公開した講演を、文字起こしと Claude Code の公式ドキュメントで照合した。Claude Code の使い方を、人が担っていた作業をどこへ移すかという軸で整理する。自分たちが採用した判断ではなく、講演者は製品の当事者である。
 
+## TL;DR
+
+- 講演の主張は、人が担っていた作業が、モデル、ハーネス、実行環境のどれかに移った、というものである。
+- CLAUDE.md にはコードから見えないことだけを書き、保証が要るものは deny rule、hook、サンドボックスで強制する。
+- 主張の大半は、Claude Code の公式ドキュメントに記述があった。
+- hook を exit 2 で終える勧めには、ドキュメントが書く例外がある。stderr がファイルの欠落を示すと、差し止めない。
+- 人と auto mode を比べた調査は、一次資料を見つけられなかった。4行は、照合を任せた agent の報告だけによる。
+
 | 項目 | 内容 |
 | --- | --- |
 | 出典 | [Rethinking Claude Code Best Practices](https://www.youtube.com/watch?v=vlfCjWuv4es)（YouTube） |

@@ -1,5 +1,12 @@
 # Stop hook で agent を続けさせる返し方のうち、Claude Code と Codex の両方で例外なく通ったのは exit 0 と JSON の `decision: block` だった
 
+## TL;DR
+
+- Stop hook の返し方は、続けさせる、止まるのを許す、強制的に止める、の3つの役割に分かれる。
+- Claude Code と Codex の両方に登録するスクリプトは、exit 0 で `{"decision":"block","reason":"..."}` を返す。
+- exit 2 は、stderr に `No such file or directory` があると、Claude Code が差し止めずに agent を止めた。公式ドキュメントは、この扱いを例外として書いている。
+- 各ケースの実行は1回で、Codex は一部のケースしか試していない（2026-11-14）。
+
 ## 結論
 
 Stop hook の返し方は、役割で3つに分かれる。続けさせる、止まるのを許す、強制的に止める、である。exit 2 と stderr、`decision: "block"`、`additionalContext` の3つは、どれも「続けさせる」役割を担う。両方の CLI に登録するスクリプトは、exit 0 で `{"decision":"block","reason":"..."}` を返す。
@@ -117,15 +124,16 @@ Claude Code は、別の Claude Code のセッションの Bash から、sandbox
 - Claude Code の通知 `stop-hook-error` は、ケース A、B、C、E、E2、F、G、H、J、K、L で出た。ケース D と I では出なかった。
 - ケース H では、`reason` が `Stop hook feedback:` として出力に現れたが、agent はツールを呼ばずに終わった。`stopReason` の文字列は、stream-json の出力に現れなかった。
 - ケース K では、`stop-hook-block-cap` の通知と、`A hook blocked the turn from ending 9 consecutive times — overriding and ending turn.` で始まるメッセージが出た。
+- ケース E、E2、F の結果は、公式ドキュメントの記述と合う（2026-11-16 に照合）。[hooks reference](https://code.claude.com/docs/en/hooks) は、`Stop`、`SubagentStop`、`TaskCompleted` と plugin の `UserPromptSubmit` について例外を書く。hook が標準出力に何も出さずに exit 2 で終わり、stderr がファイルの欠落を示すと、Claude Code は差し止めない失敗として扱う。ケース F は標準出力に JSON があり、続行した。
 - `stop_hook_active` は、どちらの CLI でも1回目が `false`、続行後が `true` だった。
 - Codex では、`~/.codex/hooks.json` の既存の Stop hook が同じ回に走り、`Completed` になった。[stop-hook-done-command.md](stop-hook-done-command.md) は、この hook を herdr のものと記録している。
 - 確かめていないこと：
   - 各ケースは1回だけ実行した。モデルは上の表の2つだけである。
   - Codex のケース D〜H、J〜L。
-  - Claude Code がファイルの欠落と判定する文字列の範囲。試したのは、`cat` が出す `No such file or directory` だけである。
+  - Claude Code がファイルの欠落と判定する文字列の範囲。試したのは、`cat` が出す `No such file or directory` だけである。ドキュメントも、この文字列を例に挙げるだけで、範囲を書かない。
   - `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` で上限が変わるか。
   - 対話モードでの表示。`claude -p` と `codex exec` だけで実行した。
-  - `SubagentStop` で同じ結果になるか。
+  - `SubagentStop` で同じ結果になるか。ドキュメントは同じ扱いと書くが、実行していない。
 
 ## 見直す条件
 
