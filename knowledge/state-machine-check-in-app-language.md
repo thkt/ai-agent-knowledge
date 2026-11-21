@@ -16,6 +16,8 @@
 
 「いつか必ず起こる」という性質は、この形の対象外とする。その性質が要るときに、TLA+ と TLC、または FizzBee を検討する。
 
+クライアントの数を決めずに性質を示したいときは、同じ題材を Lean の Veil で書いて証明する（[state-machine-proof-in-lean-veil.md](state-machine-proof-in-lean-veil.md)）。
+
 この知見は題材での検証だけで、`~/.claude` の設定にも、手元の repo にも入れていない。
 
 TLA+ と TLC の役割と、XState での対応は次のとおり。
