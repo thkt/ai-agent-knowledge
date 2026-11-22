@@ -1,74 +1,65 @@
-# ACP エージェントの返信にグラフを載せるなら、mpljs で手元に2テーマの SVG を書き、返信に Markdown の画像として書く
+# T3 Code で ACP エージェントの返信にグラフを出すなら、テーマ変数だけで描いた HTML を html_render に渡す
 
 ## TL;DR
 
-- 自作の ACP エージェント（Cantle）の返信に `![説明](/絶対パス/chart.svg)` を書くと、T3 Code はその SVG を画像として表示した。グラフは mpljs で手元に描き、定義もデータも外へ送らない。
-- mpljs の PNG では、日本語の文字が「□」になった。同梱のフォントが DejaVu と Inter の一部の文字だけのためである。SVG は文字を `<text>` で書くので、表示する側のフォントで日本語が出た。
-- ライトとダークの両方で読めるよう、同じ図を `pro-slate` と `pro-dark` で描いて1つの SVG にまとめ、`prefers-color-scheme` で切り替えた。背景は透明にし、`font-family` に日本語のゴシック体を足した。
-- 確かめていないことは2つある。1つは、`/private/tmp` 以外の場所（`~/.config` など）の SVG を T3 Code が表示するか。もう1つは、T3 Code のテーマを OS と別に切り替えたときに、SVG の中の `prefers-color-scheme` がどちらに従うか。検証日は 2026-11-22、モデルは `claude-opus-5-5`。
+- T3 Code は、ACP エージェント（自作の Cantle）に自分の MCP サーバーを渡していた。その中に、HTML をスレッドに表示する `t3-code.html_render` があり、Cantle のモデルが呼ぶと成功した。
+- 色と文字を T3 Code のテーマ変数（`var(--chart-1)`、`var(--foreground)`、`var(--font-sans)` など）だけで指定した図は、T3 Code のライトとダークの両方で T3 の配色に従った。日本語はゴシック体で出た。
+- 先に試した「SVG を手元に書き、返信に `![](パス)` で載せる」形も表示はできた。ただし、PNG では日本語が「□」になり、SVG ではフォントの指定を書き換える必要があった。さらに、SVG の中の `prefers-color-scheme` は OS のテーマに従うと指摘されたので、採用しなかった。
+- 見た目と正しさを安定させるため、モデルに HTML を自由に書かせず、用意した部品（棒グラフ、折れ線グラフ、数値カード、表）を選ばせる形を Cantle に実装する。この部品の形は、まだ検証していない。
+- 確かめていないことは 3 つある。`/private/tmp` 以外のパスの HTML を `html_render` が表示するか、表示した後にファイルを消すとスレッドの図が消えるか、SVG の `prefers-color-scheme` が本当に OS に従うかである。検証日は 2026-11-22、モデルは `claude-opus-5-5`。
 
 ## 結論
 
-ACP エージェントの返信にグラフを載せるときは、mpljs で SVG を手元に書き出し、その絶対パスを Markdown の画像として返信に書く。SVG は、2テーマを切り替える形、透明な背景、日本語のゴシック体を含む `font-family` にする。
+T3 Code で ACP エージェントの返信にグラフを出すときは、色と文字を T3 Code のテーマ変数だけで指定した HTML 文書を作り、`html_render` で表示する。Cantle では、部品（`bar_chart`、`line_chart`、`metric_cards`、`table`）を HTML に描くツールを足し、モデルがそのファイルのパスを `html_render` に渡す形にする（[thkt/cantle#286](https://github.com/thkt/cantle/issues/286)）。
 
 ## 採用した理由
 
 | できるようになったこと | 仕組み |
 | --- | --- |
-| モデルがグラフの定義を書ける | mpljs の定義は、matplotlib の呼び出しをそのまま並べた JSON である（`[["bar", [["a", "b"], [1, 2]], {}], ...]`）。モデルが書き慣れた matplotlib の API で書ける |
-| 定義もデータも外へ送らない | mpljs は依存のない TypeScript で、Bun の中で描ける。描画サービスに URL で定義を渡す必要がない |
-| 日本語のラベルを出す | SVG は既定で文字を `<text>` として書く（rc の `svg.fonttype` が `none`）。文字の形は表示する側のフォントで描かれる |
-| ライトとダークの両方で読める | 2テーマで描いた図を `<g class="theme-light">` と `<g class="theme-dark">` に入れ、CSS の `@media (prefers-color-scheme: dark)` で片方だけを表示する。背景を透明にしたので、どちらのテーマでも白い四角が浮かない |
+| ACP エージェントの側を変えずに HTML を表示できる | T3 Code は、ACP の `session/new` で自分の MCP サーバーを渡す。Cantle の履歴の `tool_scope` では、送ったツール 95 個の中に `t3-code.html_render` と `t3-code.html_preview` があった |
+| T3 Code のテーマに従う | `html_render` は、T3 Code のテーマ変数を `:root` に置いた枠で HTML を表示する。色をテーマ変数で指定すれば、アプリのテーマを切り替えたときに図の色も変わる |
+| 日本語を出す | 文字の形は、`--font-sans` が指すアプリのフォントで描かれる。描画する側にフォントを持たせる必要がない |
+| 見た目と正しさを安定させる | Generative UI の分類でいう Static（用意した部品からモデルが選ぶ）にする。モデルが選ぶのは部品と値だけで、目盛りの刻みや配色は部品の側で決める。この判断は記事の整理（[Qiita](https://qiita.com/Takenoko4594/items/4387782ff8310427048e)、[Zenn](https://zenn.dev/peishim/articles/37ff4d894f8fbc)）に基づき、測定はしていない |
 
 ## 却下した案
 
 | 案 | 却下した理由 |
 | --- | --- |
-| mpljs の公開デモ（`mpl.ivar.workers.dev`）の URL を返信に書く | URL の `/v1/` の後ろは、定義の JSON を raw deflate で圧縮して base64url にした文字列である。2,502 文字の JSON が 1,188 文字になっていた。モデルには圧縮を計算できないので、結局は変換するツールが要る。データも外部の Worker へ送られる |
-| PNG で書き出す | 日本語の文字が「□」（NO GLYPH）になり、`Glyph 25505 (採) missing from font(s) Inter` の警告が出た |
-| 日本語フォントを mpljs に足す | mpljs はフォントを固定の一覧で持つ（`src/core/fontcodec.ts:19`）。足すには、Python の `gen_fonts.py` でフォントを変換し、一覧を書き換える fork が要る。数百字分の Inter だけで 122 KB あり、数千字が要る日本語フォントはさらに大きくなる |
-| 1テーマで、背景を白のまま書き出す | T3 Code のダークモードで、白い背景が浮いて見えた。文字は Inter が無い環境でセリフ体になった |
-| `import ... from 'mpl'` で読み込む | mpljs は npm に無い。git 依存で入れても、`dist/` を作る `prepare` は実行されなかった。`package.json` の `exports` は `dist/` だけを指すので、パッケージ名と `mpl/src/index.ts` の import は解決できなかった |
+| mpljs で SVG を書き、返信に `![](パス)` で載せる | T3 Code は表示した。ただし、PNG では日本語が「□」になった（`Glyph 25505 (採) missing from font(s) Inter`）。SVG は文字を `<text font-family="Inter">` で書くので、Inter が無い環境ではセリフ体になり、フォントの指定を書き換える必要があった。ライトとダークの切替は SVG の中の `prefers-color-scheme` に頼るしかなく、これは T3 Code ではなく OS のテーマに従うと指摘された。ファイルの置き場所と消すタイミングの管理も要る |
+| mpljs の色を目印の色で塗り、後でテーマ変数に置き換えて `html_render` に渡す | 動いた。目印の色（`#010101` など）は SVG の中ですべて置き換わり、固定の色は残らなかった。ただし mpljs は npm に無く、git 依存で入れても `dist/` が作られないので、`node_modules/mpl/src/index.ts` をパスで import する必要がある。依存を増やさずに描ける部品の数に絞ったので、使わなかった |
+| mpljs の公開デモ（`mpl.ivar.workers.dev`）の URL を書く | URL の `/v1/` の後ろは、定義の JSON を raw deflate で圧縮して base64url にした文字列である。2,502 文字の JSON が 1,188 文字になっていた。モデルには圧縮を計算できず、データも外部の Worker へ送られる |
+| モデルに HTML を自由に書かせて `html_render` に渡す（Open-Ended） | ACP エージェントを変えずに動く。子スレッドで、手で書いた棒グラフの HTML を Cantle に渡させると表示された。ただし、モデルが毎回書く HTML では、見た目と目盛りの正しさがそろう保証がない。記事は Open-Ended の短所として、デザインのそろえにくさ、出力トークンの多さ、安全性を挙げる |
+| json-render の画像の部品（`@json-render/image`、Satori） | 部品は Frame、Box、Row、Column、Heading、Text、Image、Divider、Spacer だけで、グラフが無い。Satori は文字をパスに変えるので、日本語フォントのファイルを渡す必要がある |
 
 ## 検証
 
 | 項目 | 内容 |
 | --- | --- |
 | 検証日 | 2026-11-22 |
-| モデル | `claude-opus-5-5`（描画と SVG の作成）。返信に画像を書いたのは T3 Code に登録した Cantle で、モデルは記録していない |
-| ツール | Bun 1.4.5、mpljs（`ivarvong/mpl` の commit `9d6e19e`）、T3 Code（版は記録していない）、Darwin 27.2.0（Apple silicon） |
+| モデル | `claude-opus-5-5`（HTML と SVG の作成、`html_preview`）。`html_render` を呼んだのは T3 Code に登録した Cantle で、モデルは記録していない |
+| ツール | T3 Code（版は記録していない）、Cantle（commit は記録していない）、Bun 1.4.5、mpljs（`ivarvong/mpl` の commit `9d6e19e`）、Darwin 27.2.0（Apple silicon） |
 
 ### 再現手順
 
-1. `git clone https://github.com/ivarvong/mpl.git` で mpljs を取得し、commit `9d6e19e` に合わせる。
-2. clone の外に置いたスクリプトで、`mpl/tools/replay.ts` の `build` を import する。
-3. 日本語のタイトルを含む定義（`style: 'pro-slate'`）から `fig.toPNGSync({ scale: 2 })` で PNG を書き、`fig.toSVG()` で SVG を書く。
-4. rc に `{ 'figure.facecolor': 'none', 'axes.facecolor': 'none', 'savefig.facecolor': 'none' }` を渡し、`pro-slate` と `pro-dark` で1回ずつ描く。`toSVG({ idPrefix: 'l' })` と `toSVG({ idPrefix: 'd' })` で、要素の `id` が重ならないようにする。
-5. 2つの SVG の `font-family="Inter"` を `font-family="Inter, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Segoe UI', sans-serif"` に置き換える。
-6. 片方の `<svg>` の開始タグの後ろに、次の `<style>` と2つの `<g>` を入れて、1つの SVG にする。
-
-   ```text
-   <style>.theme-dark{display:none}@media (prefers-color-scheme: dark){.theme-light{display:none}.theme-dark{display:inline}}</style>
-   <g class="theme-light">（pro-slate の中身）</g><g class="theme-dark">（pro-dark の中身）</g>
-   ```
-
-7. T3 Code で ACP エージェントに、その SVG の絶対パスを `![説明](絶対パス)` の1行で返させる。
-8. T3 Code をライトとダークに切り替えて、表示を見る。
+1. T3 Code に ACP エージェントを登録し、そのエージェントが受け取った MCP のツールの一覧に `html_render` があるかを確かめる。Cantle では、`~/.config/cantle/run-history/` の最新の履歴の `tool_scope` に一覧がある。
+2. 色と文字をテーマ変数だけで指定した SVG を、`<!doctype html>` で始まる HTML 文書に入れて保存する。`html` と `body` には背景色を付けない。
+3. 自分のスレッドで `html_preview` に、その文書の絶対パスと `appearance: "dark"`、`appearance: "light"` を順に渡し、2 枚の画像を比べる。
+4. 同じ文書から `<!doctype html>` を外した断片を `html_preview` の `path` に渡し、拒否されることを確かめる。
+5. T3 Code の子スレッドで ACP エージェントに、その HTML を `html_render` で表示させる。
+6. 比べるため、mpljs で日本語のタイトルを含む図を PNG と SVG で書き出し、SVG の絶対パスを `![説明](パス)` の1行で ACP エージェントに返させる。
 
 ### 結果
 
 | 確かめたこと | 結果 |
 | --- | --- |
-| Bun で描けるか | ビルドせずに TypeScript のソースを import して描けた。棒グラフは 8〜13 ms、84 点の折れ線2本と塗りつぶしの図は 64 ms だった |
-| 日本語（PNG） | タイトルと軸ラベルの日本語が「□」になった |
-| 日本語（SVG） | 文字が `<text font-family="Inter">採点の平均（100点満点）</text>` の形で書かれ、T3 Code では日本語のまま表示された。最初はセリフ体で表示された |
-| ACP エージェントの返信での表示 | Cantle が返した `![採点の平均](/private/tmp/.../japanese.svg)` を、T3 Code は画像として表示した |
-| 2テーマの SVG | 9.6 KB になった。T3 Code で、ゴシック体の日本語で崩れずに表示された |
-| git 依存での導入 | `bun add github:ivarvong/mpl#9d6e19e` は、`--ignore-scripts` の有無と `trustedDependencies` の有無にかかわらず、ソース全体を入れ、`dist/` は作らなかった。`node_modules/mpl/src/index.ts` をパスで指定する import は動き、Cantle の `tsc --noEmit`（strict）も通った |
+| ACP エージェントへの `html_render` の受け渡し | Cantle が送ったツール 95 個の中に `t3-code.html_render` と `t3-code.html_preview` があった |
+| ACP エージェントからの `html_render` | 呼び出しは成功し、Cantle は「表示しました」と返した。T3 Code はこの呼び出しを種類 read の操作として表示した |
+| テーマ変数で描いた図 | ダークとライトのどちらでも、線、目盛り、文字の色が T3 Code の配色になった。日本語のタイトルと軸ラベルはゴシック体で出た |
+| `path` で渡す HTML の形 | 断片は「`<!doctype html>` か `<html>` で始まる文書を渡すこと」として拒否された |
+| Markdown の画像（比較） | `![採点の平均](/private/tmp/.../japanese.svg)` は画像として表示された。PNG の日本語は「□」、SVG の日本語は最初セリフ体だった |
 
 ## 見直す条件
 
-- mpljs が npm に公開されるか、`dist/` を含めて配るようになったとき。パッケージ名で import できるようになる。
-- mpljs が日本語のフォントを同梱するようになったとき。PNG も選べるようになる。
-- T3 Code が、Markdown の画像に使えるパスを制限するようになったとき。
-- ACP の `image` の content block を T3 Code が表示できると分かったとき。ファイルを置かずに画像を渡せる。
+- T3 Code が、ACP エージェントに MCP サーバーを渡さなくなったとき、または `html_render` の名前や引数が変わったとき。
+- 部品の形を Cantle に実装し、T3 Code で表示を確かめたとき。この知見に結果を足す。
+- ACP の仕様に、エージェントがクライアントに HTML や部品を渡す方法が入ったとき。
