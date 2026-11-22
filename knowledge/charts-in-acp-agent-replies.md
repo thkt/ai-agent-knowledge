@@ -19,7 +19,8 @@ T3 Code で ACP エージェントの返信にグラフを出すときは、色�
 | ACP エージェントの側を変えずに HTML を表示できる | T3 Code は、ACP の `session/new` で自分の MCP サーバーを渡す。Cantle の履歴の `tool_scope` では、送ったツール 95 個の中に `t3-code.html_render` と `t3-code.html_preview` があった |
 | T3 Code のテーマに従う | `html_render` は、T3 Code のテーマ変数を `:root` に置いた枠で HTML を表示する。色をテーマ変数で指定すれば、アプリのテーマを切り替えたときに図の色も変わる |
 | 日本語を出す | 文字の形は、`--font-sans` が指すアプリのフォントで描かれる。描画する側にフォントを持たせる必要がない |
-| 見た目と正しさを安定させる | Generative UI の分類でいう Static（用意した部品からモデルが選ぶ）にする。モデルが選ぶのは部品と値だけで、目盛りの刻みや配色は部品の側で決める。この判断は記事の整理（[Qiita](https://qiita.com/Takenoko4594/items/4387782ff8310427048e)、[Zenn](https://zenn.dev/peishim/articles/37ff4d894f8fbc)）に基づき、測定はしていない |
+
+部品を選ばせる形（Generative UI の分類でいう Static）は、thkt が選んだ実装の方針で、ここまでの検証には含まれない。安定するかは、cantle#286 を実装した後に確かめる。分類は記事の整理（[Qiita](https://qiita.com/Takenoko4594/items/4387782ff8310427048e)、[Zenn](https://zenn.dev/peishim/articles/37ff4d894f8fbc)）に従った。
 
 ## 却下した案
 
@@ -28,7 +29,7 @@ T3 Code で ACP エージェントの返信にグラフを出すときは、色�
 | mpljs で SVG を書き、返信に `![](パス)` で載せる | T3 Code は表示した。ただし、PNG では日本語が「□」になった（`Glyph 25505 (採) missing from font(s) Inter`）。SVG は文字を `<text font-family="Inter">` で書くので、Inter が無い環境ではセリフ体になり、フォントの指定を書き換える必要があった。ライトとダークの切替は SVG の中の `prefers-color-scheme` に頼るしかなく、これは T3 Code ではなく OS のテーマに従うと指摘された。ファイルの置き場所と消すタイミングの管理も要る |
 | mpljs の色を目印の色で塗り、後でテーマ変数に置き換えて `html_render` に渡す | 動いた。目印の色（`#010101` など）は SVG の中ですべて置き換わり、固定の色は残らなかった。ただし mpljs は npm に無く、git 依存で入れても `dist/` が作られないので、`node_modules/mpl/src/index.ts` をパスで import する必要がある。依存を増やさずに描ける部品の数に絞ったので、使わなかった |
 | mpljs の公開デモ（`mpl.ivar.workers.dev`）の URL を書く | URL の `/v1/` の後ろは、定義の JSON を raw deflate で圧縮して base64url にした文字列である。2,502 文字の JSON が 1,188 文字になっていた。モデルには圧縮を計算できず、データも外部の Worker へ送られる |
-| モデルに HTML を自由に書かせて `html_render` に渡す（Open-Ended） | ACP エージェントを変えずに動く。子スレッドで、手で書いた棒グラフの HTML を Cantle に渡させると表示された。ただし、モデルが毎回書く HTML では、見た目と目盛りの正しさがそろう保証がない。記事は Open-Ended の短所として、デザインのそろえにくさ、出力トークンの多さ、安全性を挙げる |
+| モデルに HTML を自由に書かせて `html_render` に渡す（Open-Ended） | ACP エージェントを変えずに使える。子スレッドで、手で書いた棒グラフの HTML を Cantle に `html_render` で渡させると、呼び出しは成功した。表示は目で確かめていない。thkt は、モデルが毎回書く HTML では見た目と目盛りの正しさがそろわないと判断し、部品を選ばせる形を選んだ。記事は Open-Ended の短所として、デザインのそろえにくさ、出力トークンの多さ、安全性を挙げる |
 | json-render の画像の部品（`@json-render/image`、Satori） | 部品は Frame、Box、Row、Column、Heading、Text、Image、Divider、Spacer だけで、グラフが無い。Satori は文字をパスに変えるので、日本語フォントのファイルを渡す必要がある |
 
 ## 検証
@@ -53,7 +54,7 @@ T3 Code で ACP エージェントの返信にグラフを出すときは、色�
 | 確かめたこと | 結果 |
 | --- | --- |
 | ACP エージェントへの `html_render` の受け渡し | Cantle が送ったツール 95 個の中に `t3-code.html_render` と `t3-code.html_preview` があった |
-| ACP エージェントからの `html_render` | 呼び出しは成功し、Cantle は「表示しました」と返した。T3 Code はこの呼び出しを種類 read の操作として表示した |
+| ACP エージェントからの `html_render` | 呼び出しは成功し、Cantle は「表示しました」と返した。T3 Code はこの呼び出しを種類 read の操作として表示した。子スレッドの図は目で確かめていない |
 | テーマ変数で描いた図 | ダークとライトのどちらでも、線、目盛り、文字の色が T3 Code の配色になった。日本語のタイトルと軸ラベルはゴシック体で出た |
 | `path` で渡す HTML の形 | 断片は「`<!doctype html>` か `<html>` で始まる文書を渡すこと」として拒否された |
 | Markdown の画像（比較） | `![採点の平均](/private/tmp/.../japanese.svg)` は画像として表示された。PNG の日本語は「□」、SVG の日本語は最初セリフ体だった |
