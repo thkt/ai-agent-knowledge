@@ -32,6 +32,8 @@ thkt はこれを証明に置き換えて決めた。根拠の無い 1 歩が混
 | 主張の裏付け | 落ちるテスト | テストの名前と、落ちた commit |
 | 主張の裏付け | 実行の出力 | 動かしたコマンドと、道具の版 |
 
+この仕組みが確かめるのは、要求が根拠の形に従っているかである。要求の意図が正しいかは確かめない。意図の正しさは、持ち主が根拠の行を読むところに残る（[formal-verification-intent-poteto.md](../sources/formal-verification-intent-poteto.md)）。そのため、合意を求める問いは、根拠の行を先頭に並べ、観測が無ければ「実際には起きていない」と 1 文で書く。
+
 ## 採用した理由
 
 | 分かったこと | 根拠 |
@@ -106,7 +108,7 @@ mutator の試しは次のとおりだった。
 | [thkt/dotclaude#959](https://github.com/thkt/dotclaude/issues/959) | 要求を Issue にする skill が、全ての Issue に根拠の行を書かせる |
 | [thkt/dotclaude#960](https://github.com/thkt/dotclaude/issues/960) | DR を書く skill が、退ける理由と前提に確かめ方を書かせる。rules の、見直す条件の行を直す |
 | [thkt/feedback-loop#251](https://github.com/thkt/feedback-loop/issues/251) | mutation を、mutator と小さい preload に置き換えるかを、導入先で測って決める |
-| 週ごとの集計 | 4 つの repo の Issue の根拠と、Bug の出どころを、毎週数える。定期実行として登録し、repo には置いていない |
+| 週ごとの集計 | 4 つの repo の Issue の根拠と、Bug の出どころを、毎週数える。答えの分かっている Issue 3 件を見張りとして先に分類し、外れたら、その週の件数を信頼できない値として報告する。定期実行として登録し、repo には置いていない |
 
 ### 確かめていないこと
 
